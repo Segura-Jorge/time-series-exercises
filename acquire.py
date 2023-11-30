@@ -1,5 +1,9 @@
 import requests
+import os
 import pandas as pd
+from env import username, host, password
+
+
 
 def fetch_swapi_people(url='https://swapi.dev/api/people/'):
     people = pd.DataFrame()
@@ -53,3 +57,53 @@ def save_and_concat_dfs(df_list, file_names):
     concatenated_df = pd.concat(df_list, axis=0, ignore_index=True)
 
     return concatenated_df
+
+
+
+def get_connection(db, user=username, host=host, password=password):
+    
+    return f'mysql+pymysql://{user}:{password}@{host}/{db}'
+
+
+def acquire_store():
+    
+    filename = 'store.csv'
+    
+    if os.path.exists(filename):
+        
+        return pd.read_csv(filename)
+    
+    else:
+        
+        query = '''
+                SELECT sale_date, sale_amount,
+                item_brand, item_name, item_price,
+                store_address, store_zipcode
+                FROM sales
+                LEFT JOIN items USING(item_id)
+                LEFT JOIN stores USING(store_id)
+                '''
+        
+        url = get_connection(db='tsa_item_demand')
+        
+        df = pd.read_sql(query, url)
+        
+        df.to_csv(filename, index=False)
+        
+        return df
+    
+def get_germany_data():
+    '''
+    This function creates a csv of germany energy data if one does not exist
+    if one already exists, it uses the existing csv 
+    and brings it into pandas as dataframe
+    '''
+    if os.path.isfile('opsd_germany_daily.csv'):
+        df = pd.read_csv('opsd_germany_daily.csv', index_col=0)
+    
+    else:
+        url = 'https://raw.githubusercontent.com/jenfly/opsd/master/opsd_germany_daily.csv'
+        df = pd.read_csv(url)
+        df.to_csv('opsd_germany_daily.csv')
+
+    return df
