@@ -92,6 +92,49 @@ def acquire_store():
         
         return df
     
+    
+def get_store_data():
+    '''
+    Returns a dataframe of all store data in the tsa_item_demand database and saves a local copy as a csv file.
+    '''
+    url = get_db_url('tsa_item_demand')
+
+    query = '''
+            SELECT *
+            FROM items
+            JOIN sales USING(item_id)
+            JOIN stores USING(store_id)
+            '''
+
+    df = pd.read_sql(query, url)
+    df.to_csv('tsa_store_data.csv', index=False)
+    return df
+
+
+def wrangle_store_data():
+    '''
+    Checks for a local cache of tsa_store_data.csv and if not present will run the get_store_data() function which acquires data from Codeup's mysql server
+    '''
+    filename = 'tsa_store_data.csv'
+    if os.path.isfile(filename):
+        df = pd.read_csv(filename)
+    else:
+        df = get_store_data()
+    return df
+
+
+def prep_store_data(df):
+    '''
+    Prepares raw store data for analysis and time series modeling.
+    '''
+    df.sale_date = pd.to_datetime(df.sale_date)
+    df = df.set_index('sale_date').sort_index()
+    df = df.rename(columns={'sale_amount': 'quantity'})
+    df['sales_total'] = df.quantity * df.item_price
+    return df
+
+    
+    
 def get_germany_data():
     '''
     This function creates a csv of germany energy data if one does not exist
